@@ -28,6 +28,11 @@ export interface IStorage {
     limit?: number;
     search?: string;
     categoryId?: string;
+    categoryIds?: string[];
+    minPrice?: number;
+    maxPrice?: number;
+    minStock?: number;
+    maxStock?: number;
     sortBy?: 'name' | 'price' | 'stock' | 'createdAt';
     sortOrder?: 'asc' | 'desc';
   }): Promise<{ products: ProductWithCategories[]; total: number }>;
@@ -68,6 +73,11 @@ export class DatabaseStorage implements IStorage {
     limit?: number;
     search?: string;
     categoryId?: string;
+    categoryIds?: string[];
+    minPrice?: number;
+    maxPrice?: number;
+    minStock?: number;
+    maxStock?: number;
     sortBy?: 'name' | 'price' | 'stock' | 'createdAt';
     sortOrder?: 'asc' | 'desc';
   } = {}): Promise<{ products: ProductWithCategories[]; total: number }> {
@@ -76,6 +86,11 @@ export class DatabaseStorage implements IStorage {
       limit = 10, 
       search, 
       categoryId, 
+      categoryIds,
+      minPrice,
+      maxPrice,
+      minStock,
+      maxStock,
       sortBy = 'createdAt', 
       sortOrder = 'desc' 
     } = params;
@@ -104,10 +119,33 @@ export class DatabaseStorage implements IStorage {
       conditions.push(ilike(products.name, `%${search}%`));
     }
 
-    if (categoryId) {
+    // Price range filters
+    if (minPrice !== undefined) {
+      conditions.push(sql`${products.price}::numeric >= ${minPrice}`);
+    }
+    if (maxPrice !== undefined) {
+      conditions.push(sql`${products.price}::numeric <= ${maxPrice}`);
+    }
+
+    // Stock range filters
+    if (minStock !== undefined) {
+      conditions.push(sql`${products.stockQuantity} >= ${minStock}`);
+    }
+    if (maxStock !== undefined) {
+      conditions.push(sql`${products.stockQuantity} <= ${maxStock}`);
+    }
+
+    // Category filters - support both single and multiple categories
+    const categoriesToFilter = categoryIds?.length ? categoryIds : (categoryId ? [categoryId] : null);
+    if (categoriesToFilter && categoriesToFilter.length > 0) {
       query = query.innerJoin(productCategories, eq(products.id, productCategories.productId));
       countQuery = countQuery.innerJoin(productCategories, eq(products.id, productCategories.productId));
-      conditions.push(eq(productCategories.categoryId, categoryId));
+      
+      if (categoriesToFilter.length === 1) {
+        conditions.push(eq(productCategories.categoryId, categoriesToFilter[0]));
+      } else {
+        conditions.push(sql`${productCategories.categoryId} IN (${sql.join(categoriesToFilter.map(id => sql`${id}`), sql`, `)})`);
+      }
     }
 
     if (conditions.length > 0) {

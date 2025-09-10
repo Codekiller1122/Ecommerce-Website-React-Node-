@@ -12,6 +12,11 @@ export default function Products() {
   const [filters, setFilters] = useState({
     search: "",
     categoryId: "",
+    categoryIds: [] as string[],
+    minPrice: undefined as number | undefined,
+    maxPrice: undefined as number | undefined,
+    minStock: undefined as number | undefined,
+    maxStock: undefined as number | undefined,
     page: 1,
     sortBy: "createdAt" as const,
     sortOrder: "desc" as const,

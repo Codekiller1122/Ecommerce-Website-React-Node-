@@ -16,12 +16,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const categoryId = req.query.categoryId as string;
       const sortBy = (req.query.sortBy as string) || 'createdAt';
       const sortOrder = (req.query.sortOrder as string) || 'desc';
+      
+      // Enhanced filtering parameters with validation
+      const categoryIds = req.query.categoryIds as string | string[];
+      const minPrice = req.query.minPrice ? parseFloat(req.query.minPrice as string) : undefined;
+      const maxPrice = req.query.maxPrice ? parseFloat(req.query.maxPrice as string) : undefined;
+      const minStock = req.query.minStock ? parseInt(req.query.minStock as string) : undefined;
+      const maxStock = req.query.maxStock ? parseInt(req.query.maxStock as string) : undefined;
+
+      // Validate price range
+      if (minPrice !== undefined && (isNaN(minPrice) || minPrice < 0)) {
+        return res.status(400).json({ message: "Invalid minPrice value" });
+      }
+      if (maxPrice !== undefined && (isNaN(maxPrice) || maxPrice < 0)) {
+        return res.status(400).json({ message: "Invalid maxPrice value" });
+      }
+      if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) {
+        return res.status(400).json({ message: "minPrice cannot be greater than maxPrice" });
+      }
+
+      // Validate stock range
+      if (minStock !== undefined && (isNaN(minStock) || minStock < 0)) {
+        return res.status(400).json({ message: "Invalid minStock value" });
+      }
+      if (maxStock !== undefined && (isNaN(maxStock) || maxStock < 0)) {
+        return res.status(400).json({ message: "Invalid maxStock value" });
+      }
+      if (minStock !== undefined && maxStock !== undefined && minStock > maxStock) {
+        return res.status(400).json({ message: "minStock cannot be greater than maxStock" });
+      }
+
+      // Handle categoryIds - can be a single string or array
+      let categoryIdsArray: string[] | undefined;
+      if (categoryIds) {
+        if (Array.isArray(categoryIds)) {
+          categoryIdsArray = categoryIds.filter(id => id && id.trim() !== '');
+        } else if (categoryIds.includes(',')) {
+          categoryIdsArray = categoryIds.split(',').map(id => id.trim()).filter(id => id !== '');
+        } else if (categoryIds.trim() !== '') {
+          categoryIdsArray = [categoryIds.trim()];
+        }
+      }
 
       const result = await storage.getProducts({
         page,
         limit,
         search,
         categoryId,
+        categoryIds: categoryIdsArray,
+        minPrice,
+        maxPrice,
+        minStock,
+        maxStock,
         sortBy: sortBy as any,
         sortOrder: sortOrder as any,
       });
