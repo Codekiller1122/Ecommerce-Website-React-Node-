@@ -16,6 +16,7 @@ import { useCreateProduct, useUpdateProduct } from "@/hooks/use-products";
 import { useCategories } from "@/hooks/use-categories";
 import { useToast } from "@/hooks/use-toast";
 import { MultiSelect } from "@/components/ui/multi-select";
+import { ImageUpload } from "@/components/ui/image-upload";
 import { z } from "zod";
 
 const formSchema = insertProductSchema.extend({
@@ -191,16 +192,12 @@ export default function ProductModal({ open, onClose, product }: ProductModalPro
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="imageUrl">Image URL</Label>
-            <Input
-              id="imageUrl"
-              type="url"
-              {...form.register("imageUrl")}
-              placeholder="https://example.com/image.jpg"
-              data-testid="input-product-image-url"
-            />
-          </div>
+          <ImageUpload
+            value={form.watch("imageUrl")}
+            onChange={(imageUrl) => form.setValue("imageUrl", imageUrl)}
+            placeholder="https://example.com/image.jpg"
+            disabled={createProductMutation.isPending || updateProductMutation.isPending}
+          />
 
           <div className="space-y-2">
             <Label>Categories *</Label>
